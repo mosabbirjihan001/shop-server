@@ -13,6 +13,9 @@ app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json({ limit: process.env.JSON_LIMIT || "12mb" }));
 app.use(express.static(path.join(__dirname, "..", "client", "build")));
 
+// --- Run DB Initialization immediately for both local and production serverless runs ---
+connectDB().catch(err => console.error("Database connection initialization failed:", err.message));
+
 // --- ADDED ROOT ROUTE FOR VERCEL ---
 app.get("/", (req, res) => {
   res.send("ShopApp API Server is running successfully on Vercel!");
@@ -130,7 +133,7 @@ async function upsertProfileBasics(supabase, user, fullName) {
     const { data, error } = await supabase
       .from("profiles")
       .upsert(payload)
-      .select()
+      .select('id') // Only request the ID back to prevent 406 format rejection errors
       .maybeSingle();
     if (!error) return data || payload;
     if (!isSchemaError(error)) throw error;
@@ -355,24 +358,16 @@ app.put("/api/orders/:id", async (req, res) => {
   }
 });
 
-// For local testing
+// ONLY use listen if running a standard local Node server environment
 if (process.env.NODE_ENV !== "production") {
-  (async () => {
-    try {
-      await connectDB();
-      app.listen(PORT, () => {
-        console.log(`Backend running on http://localhost:${PORT}`);
-      });
-    } catch (err) {
-      console.error("Server failed to start本地", err.message);
-    }
-  })();
+  app.listen(PORT, () => {
+    console.log(`Backend running locally on http://localhost:${PORT}`);
+  });
 }
 
 app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"), (err) => {
-    // If it cannot find index.html, send a clean error instead of hanging
     if (err) {
       res.status(404).send("API endpoint not found / Static frontend build missing.");
     }
