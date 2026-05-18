@@ -13,6 +13,11 @@ app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json({ limit: process.env.JSON_LIMIT || "12mb" }));
 app.use(express.static(path.join(__dirname, "..", "client", "build")));
 
+// --- ADDED ROOT ROUTE FOR VERCEL ---
+app.get("/", (req, res) => {
+  res.send("ShopApp API Server is running successfully on Vercel!");
+});
+
 function normalizeProduct(body) {
   return {
     name: body.name?.trim(),
@@ -350,21 +355,27 @@ app.put("/api/orders/:id", async (req, res) => {
   }
 });
 
-(async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, () => {
-      console.log(`Backend running on http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error("Server failed to start", err.message);
-  }
-})();
+// For local testing
+if (process.env.NODE_ENV !== "production") {
+  (async () => {
+    try {
+      await connectDB();
+      app.listen(PORT, () => {
+        console.log(`Backend running on http://localhost:${PORT}`);
+      });
+    } catch (err) {
+      console.error("Server failed to start本地", err.message);
+    }
+  })();
+}
 
 app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
   res.sendFile(path.join(__dirname, "..", "client", "build", "index.html"), (err) => {
-    if (err) next();
+    // If it cannot find index.html, send a clean error instead of hanging
+    if (err) {
+      res.status(404).send("API endpoint not found / Static frontend build missing.");
+    }
   });
 });
 
@@ -377,3 +388,6 @@ app.use((err, req, res, next) => {
       : err.message || "Server error.",
   });
 });
+
+// --- CRITICAL VERCEL EXPORT ---
+module.exports = app;
