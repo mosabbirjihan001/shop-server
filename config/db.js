@@ -4,26 +4,24 @@ require("dotenv").config();
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
-// Check to prevent the "undefined" crash
-if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ Error: SUPABASE_URL or SUPABASE_KEY is missing in .env");
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 async function connectDB() {
+  if (!supabase) {
+    console.warn("Supabase credentials are missing. API will keep running with local fallbacks where available.");
+    return false;
+  }
+
   try {
-    // We test the connection by fetching one row from your table
-    const { data, error } = await supabase.from('products').select('id').limit(1);
-    
+    const { error } = await supabase.from("products").select("id").limit(1);
     if (error) throw error;
-    
-    console.log("Supabase (PostgreSQL) Connected Successfully ✅");
+
+    console.log("Supabase connected successfully.");
+    return true;
   } catch (err) {
-    console.error("Supabase connection failed ❌");
-    console.error(err.message);
-    process.exit(1);
+    console.warn("Supabase connection failed. API is still running.");
+    console.warn(err.message);
+    return false;
   }
 }
 

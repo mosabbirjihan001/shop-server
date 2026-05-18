@@ -3,3 +3,4 @@ node_modules
 server.out.log
 server.err.log
 npm-debug.log*
+data

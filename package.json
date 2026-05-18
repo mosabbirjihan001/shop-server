@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "build": "node -e \"console.log('Server build step not required')\""
+    "build": "npm --prefix ../client install && npm --prefix ../client run build"
   },
   "keywords": [],
   "author": "",
